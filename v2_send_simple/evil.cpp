@@ -16,7 +16,7 @@ void startConsole() {
     freopen("CONOUT$", "w", stdout);
     freopen("CONOUT$", "w", stderr);
     freopen("CONIN$", "r", stdin);
-    cout << "DonAirBerlin Hack" << endl;
+    cout << "Hack" << endl;
 }
 
 void stopConsole() {
