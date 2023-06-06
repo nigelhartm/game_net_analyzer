@@ -1,3 +1,4 @@
+// https://guidedhacking.com/threads/c-detour-hooking-function-tutorial.7930/
 // Import libraries
 //
 #define UNICODE
@@ -17,9 +18,10 @@ typedef int (__thiscall* TinternalSendAfter) (uintptr_t*);
 
 // global variables, classes, pointers
 //
-uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x09C20DE0);
+uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x09C335D0);
 BYTE* pntBufferCrypt = (BYTE*) 0x080042A8;
 BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
+int hooked = 0;
 
 // allocate a new console window
 //
@@ -40,9 +42,9 @@ void stopConsole() {
 // send own data packets to game
 //
 void Send(uint32_t length, BYTE* ptrSendBuffer) {
-    TinternalSend internalSend = (TinternalSend) 0x01057B40;
+    TinternalSend internalSend = (TinternalSend) 0x01297B40;
     internalSend(CPythonNetworkStream, length, ptrSendBuffer);
-    TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x01057BB0;
+    TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x01297BB0;
     internalSendAfter(CPythonNetworkStream);
 }
 
@@ -76,9 +78,11 @@ void trackSend() {
 //
 void Main(HINSTANCE hInst) {
     startConsole();
-    //BYTE SendBuffer[] = {0x4F, 0x01, 0x06, 0x00};
-    //Send(sizeof(SendBuffer), &SendBuffer[0]);
-    trackSend();
+    
+    BYTE SendBuffer[] = {0x4F, 0x01, 0x06, 0x00};
+    Send(sizeof(SendBuffer), &SendBuffer[0]);
+    //trackSend();
+
     stopConsole();
     FreeLibraryAndExitThread(hInst, 0);
 }
