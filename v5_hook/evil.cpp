@@ -6,6 +6,15 @@
 #include <iostream>
 #include <stdio.h>
 #include <conio.h>
+#include <MinHook.h>
+
+
+//#if _WIN64 
+//#pragma comment(lib, "libMinHook.x64.lib")
+//#else
+#pragma comment(lib, "libMinHook.x86.lib")
+//#endif
+
 
 // Set namespaces
 //
@@ -18,10 +27,12 @@ typedef int (__thiscall* TinternalSendAfter) (uintptr_t*);
 
 // global variables, classes, pointers
 //
-uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x09C335D0);
+uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x0A287968);
 BYTE* pntBufferCrypt = (BYTE*) 0x080042A8;
 BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
 int hooked = 0;
+TinternalSend internalSend = (TinternalSend) 0x012F7B40;
+TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x012F7BB0;
 
 // allocate a new console window
 //
@@ -30,21 +41,20 @@ void startConsole() {
     freopen("CONOUT$", "w", stdout);
     freopen("CONOUT$", "w", stderr);
     freopen("CONIN$", "r", stdin);
-    cout << "Hack" << endl;
+    cout << "Hack started. v1" << endl;
 }
 
 // stop the allocatet console window
 //
 void stopConsole() {
+    cout << "Hack stopped." << endl;
     FreeConsole();
 }
 
 // send own data packets to game
 //
 void Send(uint32_t length, BYTE* ptrSendBuffer) {
-    TinternalSend internalSend = (TinternalSend) 0x01297B40;
     internalSend(CPythonNetworkStream, length, ptrSendBuffer);
-    TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x01297BB0;
     internalSendAfter(CPythonNetworkStream);
 }
 
@@ -74,14 +84,50 @@ void trackSend() {
     }
 }
 
+// Detour function which overrides MessageBoxW.
+int WINAPI DetourInternalSend(uintptr_t* classpointer, uint32_t length_packet, BYTE* buffer_packet)
+{
+    return internalSend(classpointer, length_packet, buffer_packet);
+}
+
 // process main function
 //
 void Main(HINSTANCE hInst) {
     startConsole();
     
-    BYTE SendBuffer[] = {0x4F, 0x01, 0x06, 0x00};
-    Send(sizeof(SendBuffer), &SendBuffer[0]);
-    //trackSend();
+    // Initialize MinHook.
+    if (MH_Initialize() != MH_OK) {
+        cout << "error init minhook" << endl;
+    }
+
+    // Create a hook for MessageBoxW, in disabled state.
+    if (MH_CreateHook(&internalSend, reinterpret_cast<LPVOID*>(&DetourInternalSend), reinterpret_cast<LPVOID*>(&internalSend)) != MH_OK) {
+        cout << "error create hook" << endl;
+    }
+
+    // Enable the hook for MessageBoxW.
+    if (MH_EnableHook(&internalSend) != MH_OK) {
+        cout << "error enable hook" << endl;
+    }
+
+    while (true) {
+        Sleep(1000);
+        if (GetAsyncKeyState(VK_ESCAPE) & 1) {
+            break;
+        }
+        //BYTE SendBuffer[] = {0x4F, 0x01, 0x00, 0x00};
+        //Send(sizeof(SendBuffer), &SendBuffer[0]);
+        cout << hooked << endl;
+    }
+    
+    // Disable the hook for MessageBoxW.
+    if (MH_DisableHook(&internalSend) != MH_OK) {
+        cout << "error disable hook" << endl;
+    }
+    // Uninitialize MinHook.
+    if (MH_Uninitialize() != MH_OK) {
+        cout << "error un init minhook" << endl;
+    }
 
     stopConsole();
     FreeLibraryAndExitThread(hInst, 0);
