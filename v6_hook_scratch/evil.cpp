@@ -24,7 +24,7 @@ BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
 
 int hooked = 0;
 int hooklength = 6;
-uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00747B43);
+uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00427B43); // die ersten 2 mov
 
 TinternalSend internalSend = (TinternalSend) 0x012F7B40;
 TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x012F7BB0;
@@ -94,7 +94,11 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
 }
 
 void hooked_send() {
-    hooked++;
+    //hooked++;
+    asm(".intel_syntax noprefix;"
+        "mov eax,[esi+54];"
+        "mov ecx,[esi+50];"
+        ".att_syntax;");
     uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
     void (*foo)(void) = (void (*)())jmpBackAddy;
     foo();
