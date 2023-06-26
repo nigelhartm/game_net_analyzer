@@ -95,13 +95,16 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
 
 void hooked_send() {
     //hooked++;
-    asm(".intel_syntax noprefix;"
-        "mov eax,[esi+54];"
-        "mov ecx,[esi+50];"
-        ".att_syntax;");
-    uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
-    void (*foo)(void) = (void (*)())jmpBackAddy;
-    foo();
+    //asm(".intel_syntax noprefix;"
+    //    "mov eax,[esi+54];"
+    //    "mov ecx,[esi+50];"
+    //    ".att_syntax;");
+    asm("movl 0x54(%esi),%eax;");
+    asm("movl 0x50(%esi),%ecx;");
+    asm("jmp %0;":"r" (reinterpret_cast<uintptr_t*>(hookAddress + hooklength)));
+    //uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
+    //void (*foo)(void) = (void (*)())jmpBackAddy;
+    //foo();
 }
 
 // process main function
