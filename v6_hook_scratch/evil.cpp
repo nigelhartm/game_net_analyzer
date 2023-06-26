@@ -100,16 +100,16 @@ void __declspec(naked) hooked_send() {
     //    "mov eax,[esi+54];"
     //    "mov ecx,[esi+50];"
     //    ".att_syntax;");
-    asm("pushad;");
-    asm("pushfd;");
+    asm("pushad;"
+        "pushfd;");
 
     hooked++;
     
-    asm("popfd;");
-    asm("popad;");
-    asm("movl 0x54(%esi),%eax;");
-    asm("movl 0x50(%esi),%ecx;");
-    asm("jmp dword [jmpBackAddy];");
+    asm("popfd;"
+        "popad;"
+        "movl 0x54(%esi),%eax;"
+        "movl 0x50(%esi),%ecx;"
+        "jmp dword [jmpBackAddy];");
     //uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
     //void (*foo)(void) = (void (*)())jmpBackAddy;
     //foo();
