@@ -24,4 +24,13 @@ just doing esp + 14 in Visual Studio = decimal<br>
 <br>
 # more
 create naked function? declscpec?<br>
+```
+void __declspec(naked) ourFunct() {
+
+    __asm {
+        mov qword ptr[rcx], 0x46
+        jmp[jmpBackAddy]
+    }
+}
+```
 pushad pushfd? <br>
