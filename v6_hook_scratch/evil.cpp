@@ -100,13 +100,17 @@ void __declspec(naked) hooked_send() {
     //    "mov eax,[esi+54];"
     //    "mov ecx,[esi+50];"
     //    ".att_syntax;");
-    asm("pushad;"
-        "pushfd;");
+    
+    asm("pushad;"); // pushfd
 
     hooked++;
-    
-    asm("popfd;"
-        "popad;"
+
+    //https://www.felixcloutier.com/x86/pusha:pushad.html
+    // DWORD regEDI = 0x00000000;
+    // asm("pop dword [regEDI]");
+    // asm("push dword [regEDI]");
+
+    asm("popad;"
         "movl 0x54(%esi),%eax;"
         "movl 0x50(%esi),%ecx;"
         "jmp dword [jmpBackAddy];");
