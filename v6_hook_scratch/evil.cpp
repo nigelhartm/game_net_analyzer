@@ -99,6 +99,13 @@ void hooked_send() {
     //    "mov eax,[esi+54];"
     //    "mov ecx,[esi+50];"
     //    ".att_syntax;");
+    asm("pushad;");
+    asm("pushfd;");
+
+    hooked++;
+    
+    asm("popfd;");
+    asm("popad;");
     asm("movl 0x54(%esi),%eax;");
     asm("movl 0x50(%esi),%ecx;");
     asm("jmp %0;":"r" (reinterpret_cast<uintptr_t*>(hookAddress + hooklength)));
