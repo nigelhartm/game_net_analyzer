@@ -24,8 +24,8 @@ BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
 
 int hooked = 0;
 int hooklength = 6;
-uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00427B43); // die ersten 2 mov
-uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
+uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00C17B43); // die ersten 2 mov
+uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
 
 TinternalSend internalSend = (TinternalSend) 0x012F7B40;
 TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x012F7BB0;
@@ -37,7 +37,7 @@ void startConsole() {
     freopen("CONOUT$", "w", stdout);
     freopen("CONOUT$", "w", stderr);
     freopen("CONIN$", "r", stdin);
-    cout << "Hack started. v1" << endl;
+    cout << "Hack started. v2" << endl;
 }
 
 // stop the allocatet console window
@@ -100,20 +100,27 @@ void __declspec(naked) hooked_send() {
     //    "mov eax,[esi+54];"
     //    "mov ecx,[esi+50];"
     //    ".att_syntax;");
-    
-    asm("pushad;"); // pushfd
+    asm("movl 0x54(%esi), %eax;");
+    asm("movl 0x50(%esi), %ecx;");
+    asm("movl %0, %%eax;" : : "r" (jmpBackAddy));
+    asm("push %eax;");
+    asm("movl 0x4(%esp), %eax;");
+    asm("ret;");
+    //asm volatile ("jmp *%0;" : : "r" (jmpBackAddy));
+//    asm("pushad;"); // pushfd
 
-    hooked++;
+//    hooked++;
 
     //https://www.felixcloutier.com/x86/pusha:pushad.html
     // DWORD regEDI = 0x00000000;
     // asm("pop dword [regEDI]");
     // asm("push dword [regEDI]");
 
-    asm("popad;"
-        "mov eax,[esi+0x54];"
-        "mov ecx,[esi+0x50];"
-        "jmp dword [jmpBackAddy];");
+
+    //asm("popad;"
+    //    "mov eax,[esi+0x54];"
+    //    "mov ecx,[esi+0x50];"
+    //    "jmp dword [jmpBackAddy];");
     //uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
     //void (*foo)(void) = (void (*)())jmpBackAddy;
     //foo();
