@@ -94,7 +94,7 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
     return true;
 }
 
-void hooked_send() {
+void __declspec(naked) hooked_send() {
     //hooked++;
     //asm(".intel_syntax noprefix;"
     //    "mov eax,[esi+54];"
