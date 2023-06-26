@@ -109,7 +109,7 @@ void hooked_send() {
     asm("popad;");
     asm("movl 0x54(%esi),%eax;");
     asm("movl 0x50(%esi),%ecx;");
-    asm("jmp %0;":"r" (jmpBackAddy);
+    asm("jmp %0;":"=r" (jmpBackAddy);
     //uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
     //void (*foo)(void) = (void (*)())jmpBackAddy;
     //foo();
