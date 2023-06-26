@@ -45,3 +45,6 @@ int no = 100, val ;
          : "%ebx"         /* clobbered register */
      );
 ```
+
+# change compiler
+g++ -c main.cpp -masm=intel -m32
