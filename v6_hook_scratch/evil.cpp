@@ -102,6 +102,7 @@ void __declspec(naked) hooked_send() {
     //    ".att_syntax;");
     asm("movl 0x54(%esi), %eax;");
     asm("movl 0x50(%esi), %ecx;");
+    asm("push %eax;");
     asm("movl %0, %%eax;" : : "r" (jmpBackAddy));
     asm("push %eax;");
     asm("movl 0x4(%esp), %eax;");
