@@ -111,8 +111,8 @@ void __declspec(naked) hooked_send() {
     // asm("push dword [regEDI]");
 
     asm("popad;"
-        "movl 0x54(%esi),%eax;"
-        "movl 0x50(%esi),%ecx;"
+        "mov eax,[esi+0x54];"
+        "mov ecx,[esi+0x50];"
         "jmp dword [jmpBackAddy];");
     //uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(hookAddress + hooklength);
     //void (*foo)(void) = (void (*)())jmpBackAddy;
