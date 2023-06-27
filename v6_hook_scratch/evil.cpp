@@ -24,7 +24,7 @@ BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
 
 int hooked = 0;
 int hooklength = 6;
-uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00C17B43); // die ersten 2 mov
+uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x00E87B43); // after subfunction
 uintptr_t* jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
 
 TinternalSend internalSend = (TinternalSend) 0x012F7B40;
@@ -95,11 +95,11 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
 }
 
 void __declspec(naked) hooked_send() {
-    //hooked++;
     //asm(".intel_syntax noprefix;"
     //    "mov eax,[esi+54];"
     //    "mov ecx,[esi+50];"
     //    ".att_syntax;");
+   /* 
     asm("movl 0x54(%esi), %eax;");
     asm("movl 0x50(%esi), %ecx;");
     asm("push %eax;");
@@ -107,17 +107,19 @@ void __declspec(naked) hooked_send() {
     asm("push %eax;");
     asm("movl 0x4(%esp), %eax;");
     asm("ret;");
+*/
+    DWORD paket = 0x00000000;
+    hooked++;
+    asm("movl 0x0C(%%esp), %0": "=r" (xy)::);
+    cout << hex << xy << endl;
+    asm("movl 0x54(%%esi), %%eax;"
+        "movl 0x50(%%esi), %%ecx;"
+        "jmp *%0;"
+        : /* no output */
+        : "r" (jmpBackAddy)
+        : "esi", "eax", "ecx");
     //asm volatile ("jmp *%0;" : : "r" (jmpBackAddy));
-//    asm("pushad;"); // pushfd
-
-//    hooked++;
-
-    //https://www.felixcloutier.com/x86/pusha:pushad.html
-    // DWORD regEDI = 0x00000000;
-    // asm("pop dword [regEDI]");
-    // asm("push dword [regEDI]");
-
-
+    //    asm("pushad;"); // pushfd
     //asm("popad;"
     //    "mov eax,[esi+0x54];"
     //    "mov ecx,[esi+0x50];"
@@ -143,7 +145,7 @@ void Main(HINSTANCE hInst) {
         }
         //BYTE SendBuffer[] = {0x4F, 0x01, 0x00, 0x00};
         //Send(sizeof(SendBuffer), &SendBuffer[0]);
-        cout << hooked << endl;
+        //cout << hooked << endl;
     }
 
     stopConsole();
