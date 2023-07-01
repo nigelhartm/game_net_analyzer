@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <conio.h>
 #include <vector>
+#include <winuser.h>
 // Set namespaces
 //
 using namespace std;
@@ -18,7 +19,7 @@ typedef int (__thiscall* TinternalSendAfter) (uintptr_t*);
 
 // global variables, classes, pointers
 //
-uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x0A287968);
+uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x0A287968); // find by hooking send and ecx register
 BYTE* pntBufferCrypt = (BYTE*) 0x080042A8;
 BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
 
@@ -218,11 +219,15 @@ DWORD GetAddressFromSignature(std::vector<int> signature, DWORD startaddress=0, 
     return NULL;
 }
 
+void test() {
+    cout << "python <3" << endl;
+}
+
 // process main function
 //
 void Main(HINSTANCE hInst) {
     startConsole();
-
+/*
     // init hook
     std::vector<int> signature_send = {0x56, 0x8B, 0xF1, 0x8B, 0x46, 0x54, 0x8B, 0x4E, 0x50, 0x57, 0x8B, 0x7C, 0x24, 0x0C, 0x2B, 0xC8, 0x8D, 0x57, 0x01, 0x3B, 0xD1};
     cout << "Search for send function." << endl;
@@ -232,7 +237,7 @@ void Main(HINSTANCE hInst) {
     jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
     detour_send(hookAddress, reinterpret_cast<uintptr_t*>(&hooked_send), hooklength);
     cout << "Hooked function at " << uppercase << hex << hookAddress << endl;
-
+*/
     // print status
     while (true) {
         Sleep(500);
@@ -249,7 +254,7 @@ void Main(HINSTANCE hInst) {
 
 // DLL main function
 //
-BOOL APIENTRY DllMain (HINSTANCE hInst, DWORD reason, LPVOID reserved) {
+/*BOOL APIENTRY DllMain (HINSTANCE hInst, DWORD reason, LPVOID reserved) {
     switch (reason) {
         case DLL_PROCESS_ATTACH:
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Main, hInst, NULL, NULL);
@@ -258,4 +263,112 @@ BOOL APIENTRY DllMain (HINSTANCE hInst, DWORD reason, LPVOID reserved) {
             break;
     }
     return TRUE;
+}*/
+
+////////////////////////////////////////////////////////////////////////////////////
+//https://sim0n.wordpress.com/2009/03/29/c-creating-a-window-from-a-dll/
+////////////////////////////////////////////////////////////////////////////////////
+#define MYMENU_EXIT         (WM_APP + 101)
+#define MYMENU_MESSAGEBOX   (WM_APP + 102) 
+
+HINSTANCE  inj_hModule;          //Injected Modules Handle
+HWND       prnt_hWnd;            //Parent Window Handle
+HWND TextBox; // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
+
+//WndProc for the new window
+LRESULT CALLBACK DLLWindowProc (HWND, UINT, WPARAM, LPARAM);
+
+//Register our windows Class
+BOOL RegisterDLLWindowClass(wchar_t szClassName[]){
+    WNDCLASSEX wc;
+    wc.hInstance =  inj_hModule;
+	wc.lpszClassName = (LPCWSTR)L"InjectedDLLWindowClass";
+    wc.lpszClassName = (LPCWSTR)szClassName;
+    wc.lpfnWndProc = DLLWindowProc;
+    wc.style = CS_DBLCLKS;
+    wc.cbSize = sizeof (WNDCLASSEX);
+    wc.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+    wc.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
+    wc.hCursor = LoadCursor (NULL, IDC_ARROW);
+    wc.lpszMenuName = NULL;
+    wc.cbClsExtra = 0;
+    wc.cbWndExtra = 0;
+    wc.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
+    if (!RegisterClassEx (&wc))
+		return 0;
+}
+//Creating our windows Menu
+HMENU CreateDLLWindowMenu(){
+	HMENU hMenu;
+	hMenu = CreateMenu();
+	HMENU hMenuPopup;
+    if(hMenu==NULL)
+        return FALSE;
+    hMenuPopup = CreatePopupMenu();
+	AppendMenu (hMenuPopup, MF_STRING, MYMENU_EXIT, TEXT("Exit"));
+    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("File")); 
+	hMenuPopup = CreatePopupMenu();
+    AppendMenu (hMenuPopup, MF_STRING,MYMENU_MESSAGEBOX, TEXT("MessageBox")); 
+    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("Test")); 
+	return hMenu;
+}
+//The new thread
+DWORD WINAPI ThreadProc( LPVOID lpParam ){
+    MSG messages;
+	wchar_t *pString = reinterpret_cast<wchar_t * > (lpParam);
+	HMENU hMenu = CreateDLLWindowMenu();
+	RegisterDLLWindowClass(L"InjectedDLLWindowClass");
+	prnt_hWnd = FindWindow(L"Window Injected Into ClassName", L"Window Injected Into Caption");
+	HWND hwnd = CreateWindowEx (0, L"InjectedDLLWindowClass", pString, WS_EX_PALETTEWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, prnt_hWnd, hMenu,inj_hModule, NULL );
+	ShowWindow (hwnd, SW_SHOWNORMAL);
+    while (GetMessage (&messages, NULL, 0, 0)) {
+		TranslateMessage(&messages);
+        DispatchMessage(&messages);
+    }
+    
+    FreeLibraryAndExitThread(inj_hModule, 0);
+    return 1;
+}
+
+//Our new windows proc
+LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
+    switch (message){
+        case WM_CREATE:
+            // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
+            TextBox = CreateWindow(L"EDIT",
+                                   L"",
+                                   WS_BORDER | WS_CHILD | WS_VISIBLE,
+                                   0, 0, 100, 100,
+                                   hwnd, (HMENU) 1, NULL, NULL);
+		case WM_COMMAND:
+               switch(wParam){
+                    case MYMENU_EXIT:
+						SendMessage(hwnd, WM_CLOSE, 0, 0);
+                        break;
+                    case MYMENU_MESSAGEBOX:
+						MessageBox(hwnd, L"Test", L"MessageBox",MB_OK);
+                        string buffer = "append this!";
+                        HWND hEdit = GetDlgItem (TextBox, ID_EDIT);
+                        int index = GetWindowTextLength (hEdit);
+                        SetFocus (hEdit); // set focus
+                        SendMessageA(hEdit, EM_SETSEL, (WPARAM)index, (LPARAM)index); // set selection - end of text
+                        SendMessageA(hEdit, EM_REPLACESEL, 0, (LPARAM)buffer.c_str()); // append!
+                        break;
+               }
+               break;
+		case WM_DESTROY:
+			PostQuitMessage (0);
+			break;
+		default:
+			return DefWindowProc (hwnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReserved) {
+	if(ul_reason_for_call==DLL_PROCESS_ATTACH) {
+		inj_hModule = hModule;
+		CreateThread(0, NULL, ThreadProc, (LPVOID)L"Window Title", NULL, NULL);
+	}
+	return TRUE;
 }
