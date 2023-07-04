@@ -8,6 +8,24 @@
 #include <conio.h>
 #include <vector>
 #include <winuser.h>
+#include <cstdlib>
+#include <sstream>
+#include<string>
+#include<Tchar.h>
+
+// WINDOW
+#define MYMENU_EXIT         (WM_APP + 101)
+#define MYMENU_MESSAGEBOX   (WM_APP + 102) 
+#define MYBUTTON_SEND   (WM_APP + 103) 
+
+HINSTANCE  inj_hModule;          //Injected Modules Handle
+HWND       prnt_hWnd;            //Parent Window Handle
+HWND TextBox, SendBox, SendButton; // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
+
+//WndProc for the new window
+LRESULT CALLBACK DLLWindowProc (HWND, UINT, WPARAM, LPARAM);
+
+
 // Set namespaces
 //
 using namespace std;
@@ -19,9 +37,11 @@ typedef int (__thiscall* TinternalSendAfter) (uintptr_t*);
 
 // global variables, classes, pointers
 //
-uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x0A287968); // find by hooking send and ecx register
+uintptr_t* CPythonNetworkStream = reinterpret_cast<uintptr_t*>(0x00000000); // find by hooking send and ecx register
+bool initSend = FALSE;
 BYTE* pntBufferCrypt = (BYTE*) 0x080042A8;
 BYTE* pntSendCounter = (BYTE*) 0x09C20E70;
+BYTE* bufferptr_CPythonNetworkStream = (BYTE*) 0x00000000;
 
 int hooklength = 6;
 uintptr_t* hookAddress = reinterpret_cast<uintptr_t*>(0x008A7B43); // after subfunction
@@ -60,11 +80,45 @@ BYTE ownBuffer[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
+BYTE mySendBuffer[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
 BYTE* bufferAddress = (BYTE*) 0x00000000;
 uint32_t bufferLength = 0;
-
-TinternalSend internalSend = (TinternalSend) 0x012F7B40;
-TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x012F7BB0;
+bool window_mode = FALSE;
+TinternalSend internalSend = (TinternalSend) 0x00000000;
+TinternalSendAfter internalSendAfter = (TinternalSendAfter) 0x00000000;
 
 // allocate a new console window
 //
@@ -133,12 +187,32 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
 void otherFunc() {
     uintptr_t* ptr_bufferAddress = reinterpret_cast<uintptr_t*>(bufferAddress);
     memcpy (&ownBuffer[0], ptr_bufferAddress, bufferLength);
-    if(bufferLength != 1) {
-        cout << endl << endl;
-        cout << "SEND PACKAGE (LENGTH = " << bufferLength << " + 1)" << endl;
-    }
+    //if(bufferLength != 1) {
+    //    cout << endl << endl;
+    //    cout << "SEND PACKAGE (LENGTH = " << bufferLength << " + 1)" << endl;
+    //}
+    std::stringstream stream;
     for(int i = 0; i < bufferLength; i++) {
-        cout << ( ( (int) ownBuffer[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[i];
+        stream << ( ( (int) ownBuffer[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[i];
+        //cout << ( ( (int) ownBuffer[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[i];
+    }
+    // dont forget there was also some 0 length packages at game start- can be important
+    if(bufferLength > 1) {
+        string prefix = "SEND: ";
+        string buffer = prefix.append(stream.str().append("\r\n"));
+        int index = GetWindowTextLength (TextBox);
+        SetFocus (TextBox); // set focus
+        SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index); // set selection - end of text
+        SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str()); // append!
+    }
+    else {
+        cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
+    }
+    if(initSend == FALSE){
+        CPythonNetworkStream = reinterpret_cast<uintptr_t*>(bufferptr_CPythonNetworkStream);
+        cout << "CPYTHON found " << (void*)bufferptr_CPythonNetworkStream << endl;
+        cout << "CPYTHON found " << CPythonNetworkStream << endl;
+        initSend = TRUE;
     }
 }
 
@@ -161,6 +235,7 @@ void __declspec(naked) hooked_send() {
     // mein code
     asm("movl 0x2C(%%esp), %0": "=r" (bufferAddress)::);
     asm("movl 0x28(%%esp), %0": "=r" (bufferLength)::);
+    asm("movl 0x08(%%esp), %0": "=r" (bufferptr_CPythonNetworkStream)::); // wurde nach esi verschoben
     otherFunc();
 
     // Pop EBP, EDI, ESI, EDX, EXB, ECX, EAX
@@ -219,10 +294,6 @@ DWORD GetAddressFromSignature(std::vector<int> signature, DWORD startaddress=0, 
     return NULL;
 }
 
-void test() {
-    cout << "python <3" << endl;
-}
-
 // process main function
 //
 void Main(HINSTANCE hInst) {
@@ -268,15 +339,7 @@ void Main(HINSTANCE hInst) {
 ////////////////////////////////////////////////////////////////////////////////////
 //https://sim0n.wordpress.com/2009/03/29/c-creating-a-window-from-a-dll/
 ////////////////////////////////////////////////////////////////////////////////////
-#define MYMENU_EXIT         (WM_APP + 101)
-#define MYMENU_MESSAGEBOX   (WM_APP + 102) 
 
-HINSTANCE  inj_hModule;          //Injected Modules Handle
-HWND       prnt_hWnd;            //Parent Window Handle
-HWND TextBox; // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
-
-//WndProc for the new window
-LRESULT CALLBACK DLLWindowProc (HWND, UINT, WPARAM, LPARAM);
 
 //Register our windows Class
 BOOL RegisterDLLWindowClass(wchar_t szClassName[]){
@@ -308,8 +371,8 @@ HMENU CreateDLLWindowMenu(){
 	AppendMenu (hMenuPopup, MF_STRING, MYMENU_EXIT, TEXT("Exit"));
     AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("File")); 
 	hMenuPopup = CreatePopupMenu();
-    AppendMenu (hMenuPopup, MF_STRING,MYMENU_MESSAGEBOX, TEXT("MessageBox")); 
-    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("Test")); 
+    AppendMenu (hMenuPopup, MF_STRING,MYMENU_MESSAGEBOX, TEXT("Clear Textbox")); 
+    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("Options")); 
 	return hMenu;
 }
 //The new thread
@@ -319,13 +382,32 @@ DWORD WINAPI ThreadProc( LPVOID lpParam ){
 	HMENU hMenu = CreateDLLWindowMenu();
 	RegisterDLLWindowClass(L"InjectedDLLWindowClass");
 	prnt_hWnd = FindWindow(L"Window Injected Into ClassName", L"Window Injected Into Caption");
-	HWND hwnd = CreateWindowEx (0, L"InjectedDLLWindowClass", pString, WS_EX_PALETTEWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, prnt_hWnd, hMenu,inj_hModule, NULL );
+	HWND hwnd = CreateWindowEx (0, L"InjectedDLLWindowClass", pString, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1225, 750, prnt_hWnd, hMenu,inj_hModule, NULL );
 	ShowWindow (hwnd, SW_SHOWNORMAL);
+
+    startConsole();
+
+    // init hook
+    std::vector<int> signature_send = {0x56, 0x8B, 0xF1, 0x8B, 0x46, 0x54, 0x8B, 0x4E, 0x50, 0x57, 0x8B, 0x7C, 0x24, 0x0C, 0x2B, 0xC8, 0x8D, 0x57, 0x01, 0x3B, 0xD1};
+    cout << "Search for send function." << endl;
+    DWORD add_send = GetAddressFromSignature(signature_send,0x00000000,0x00000000);
+    cout << "Found Send function at "  << uppercase << hex << add_send << endl;
+    internalSend = (TinternalSend) (add_send);
+    cout << "Set internalSend to "  << (void*)internalSend << endl;
+    internalSendAfter = (TinternalSendAfter) (add_send+0x70);
+    cout << "Set internalSendAfter to "  << (void*)internalSendAfter << endl;
+    hookAddress = reinterpret_cast<uintptr_t*>(add_send + 0x03);
+    jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
+    detour_send(hookAddress, reinterpret_cast<uintptr_t*>(&hooked_send), hooklength);
+    //cout << "Hooked function at " << uppercase << hex << hookAddress << endl;
+    window_mode = TRUE;
+
     while (GetMessage (&messages, NULL, 0, 0)) {
 		TranslateMessage(&messages);
         DispatchMessage(&messages);
     }
     
+    stopConsole();
     FreeLibraryAndExitThread(inj_hModule, 0);
     return 1;
 }
@@ -337,23 +419,68 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
             TextBox = CreateWindow(L"EDIT",
                                    L"",
-                                   WS_BORDER | WS_CHILD | WS_VISIBLE,
-                                   0, 0, 100, 100,
+                                   WS_BORDER | WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_HSCROLL | ES_READONLY,
+                                   0, 0, 1200, 600,
                                    hwnd, (HMENU) 1, NULL, NULL);
+            SendBox = CreateWindow(L"EDIT",
+                                   L"",
+                                   WS_BORDER | WS_CHILD | WS_VISIBLE,
+                                   0, 610, 1100, 30,
+                                   hwnd, (HMENU) 1, NULL, NULL);
+            SendButton = CreateWindow(L"BUTTON",  // Predefined class; Unicode assumed 
+                                    L"SEND",      // Button text 
+                                    WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+                                    1110,         // x position 
+                                    610,         // y position 
+                                    90,        // Button width
+                                    30,        // Button height
+                                    hwnd,     // Parent window
+                                    (HMENU)MYBUTTON_SEND,       // No menu.
+                                    NULL, 
+                                    NULL);      // Pointer not needed.
 		case WM_COMMAND:
                switch(wParam){
-                    case MYMENU_EXIT:
+                    case MYMENU_EXIT: {
 						SendMessage(hwnd, WM_CLOSE, 0, 0);
+                        break;}
+                    case MYMENU_MESSAGEBOX:{
+                        // example append message
+						//MessageBox(hwnd, L"Test", L"MessageBox",MB_OK);
+                        //string buffer = "append this!\n";
+                        int index = GetWindowTextLength (TextBox);
+                        cout << index << endl;
+                        SetFocus (TextBox); // set focus
+                        SendMessage(TextBox, EM_SETREADONLY, FALSE, 0);
+                        SendMessage(TextBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
+                        SendMessage(TextBox, WM_CLEAR, (WPARAM)0, (LPARAM)index); // set selection - end of text
+                        SendMessage(TextBox, EM_SETREADONLY, TRUE, 0);
+                        break;}
+                    case MYBUTTON_SEND:{
+                        cout << "YOU SEND." << endl;
+                        int len = SendMessage(SendBox, WM_GETTEXTLENGTH, 0, 0);
+                        cout << len << endl;
+                        TCHAR* display = new TCHAR[len];
+                        SendMessage(SendBox,WM_GETTEXT,len+1,(LPARAM)display);
+                        //_tprintf(display);
+                        wstring test(&display[0]);
+                        string test2(test.begin(), test.end());
+                        cout << test2 << endl;
+                        if(len%2==0) {
+                            int j=0;
+                            for(int i=0; i < test2.length()-1; i=i+2) {
+                                cout << stoi(test2.substr(i,2).c_str(), 0, 16) << endl;
+                                mySendBuffer[j] = stoi(test2.substr(i,2).c_str(), 0, 16);
+                                j++;
+                            }
+                            Send(len/2, &mySendBuffer[0]);
+                        }
+                        int index = GetWindowTextLength (SendBox);
+                        cout << index << endl;
+                        SetFocus (SendBox); // set focus
+                        SendMessage(SendBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
+                        SendMessage(SendBox, WM_CLEAR, (WPARAM)0, (LPARAM)index); // set selection - end of text
                         break;
-                    case MYMENU_MESSAGEBOX:
-						MessageBox(hwnd, L"Test", L"MessageBox",MB_OK);
-                        string buffer = "append this!";
-                        HWND hEdit = GetDlgItem (TextBox, ID_EDIT);
-                        int index = GetWindowTextLength (hEdit);
-                        SetFocus (hEdit); // set focus
-                        SendMessageA(hEdit, EM_SETSEL, (WPARAM)index, (LPARAM)index); // set selection - end of text
-                        SendMessageA(hEdit, EM_REPLACESEL, 0, (LPARAM)buffer.c_str()); // append!
-                        break;
+                        }
                }
                break;
 		case WM_DESTROY:
@@ -368,7 +495,7 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReserved) {
 	if(ul_reason_for_call==DLL_PROCESS_ATTACH) {
 		inj_hModule = hModule;
-		CreateThread(0, NULL, ThreadProc, (LPVOID)L"Window Title", NULL, NULL);
+		CreateThread(0, NULL, ThreadProc, (LPVOID)L"GAME NETWORK TRACKER", NULL, NULL);
 	}
 	return TRUE;
 }
