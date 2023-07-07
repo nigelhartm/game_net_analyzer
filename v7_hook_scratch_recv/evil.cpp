@@ -1,3 +1,7 @@
+// Hook send function by searching for "ItemUse" Error packet string and then there it is 
+// hook recv function by getting ws32.recv get buffer ... find what acces and then take the one at bottom 2 one from bottom....
+//
+//
 // https://guidedhacking.com/threads/c-detour-hooking-function-tutorial.7930/
 // Import libraries
 //
@@ -12,6 +16,42 @@
 #include <sstream>
 #include<string>
 #include<Tchar.h>
+
+/*
+metin2client.exe+2CA80 - 83 EC 10              - sub esp,10 { 16 }
+metin2client.exe+2CA83 - 8B 41 34              - mov eax,[ecx+34]
+metin2client.exe+2CA86 - 53                    - push ebx
+metin2client.exe+2CA87 - 8B 5C 24 20           - mov ebx,[esp+20]
+metin2client.exe+2CA8B - 55                    - push ebp
+metin2client.exe+2CA8C - 56                    - push esi
+metin2client.exe+2CA8D - 8D 71 34              - lea esi,[ecx+34]
+metin2client.exe+2CA90 - 57                    - push edi
+metin2client.exe+2CA91 - 89 4C 24 10           - mov [esp+10],ecx
+metin2client.exe+2CA95 - 89 74 24 1C           - mov [esp+1C],esi
+metin2client.exe+2CA99 - 85 C0                 - test eax,eax
+metin2client.exe+2CA9B - 0F86 B2000000         - jbe metin2client.exe+2CB53
+metin2client.exe+2CAA1 - 8D 54 24 2C           - lea edx,[esp+2C]
+metin2client.exe+2CAA5 - 3B D8                 - cmp ebx,eax
+metin2client.exe+2CAA7 - 72 02                 - jb metin2client.exe+2CAAB
+metin2client.exe+2CAA9 - 8B D6                 - mov edx,esi
+metin2client.exe+2CAAB - 8B 3A                 - mov edi,[edx]
+metin2client.exe+2CAAD - 8B 51 30              - mov edx,[ecx+30]
+metin2client.exe+2CAB0 - 03 51 2C              - add edx,[ecx+2C]
+metin2client.exe+2CAB3 - 8B 6C 24 28           - mov ebp,[esp+28]
+metin2client.exe+2CAB7 - 57                    - push edi
+metin2client.exe+2CAB8 - 2B D0                 - sub edx,eax
+metin2client.exe+2CABA - 8B 44 24 28           - mov eax,[esp+28]
+metin2client.exe+2CABE - 55                    - push ebp
+metin2client.exe+2CABF - 50                    - push eax
+metin2client.exe+2CAC0 - E8 6B850000           - call metin2client.exe+35030
+metin2client.exe+2CAC5 - 29 3E                 - sub [esi],edi
+metin2client.exe+2CAC7 - 8B 74 24 30           - mov esi,[esp+30]
+metin2client.exe+2CACB - 2B DF                 - sub ebx,edi
+metin2client.exe+2CACD - 03 F7                 - add esi,edi
+metin2client.exe+2CACF - 83 C4 0C              - add esp,0C { 12 }
+metin2client.exe+2CAD2 - 03 EF                 - add ebp,edi
+metin2client.exe+2CAD4 - 89 5C 24 2C           - mov [esp+2C],ebx
+*/
 
 // WINDOW
 #define MYMENU_EXIT         (WM_APP + 101)
@@ -298,34 +338,37 @@ DWORD GetAddressFromSignature(std::vector<int> signature, DWORD startaddress=0, 
 //
 void Main(HINSTANCE hInst) {
     startConsole();
-/*
+
     // init hook
-    std::vector<int> signature_send = {0x56, 0x8B, 0xF1, 0x8B, 0x46, 0x54, 0x8B, 0x4E, 0x50, 0x57, 0x8B, 0x7C, 0x24, 0x0C, 0x2B, 0xC8, 0x8D, 0x57, 0x01, 0x3B, 0xD1};
+    std::vector<int> signature_send = {0x83, 0xEC, 0x10, 0x8B, 0x41, 0x34, 0x53, 0x8B, 0x5C, 0x24, 0x20, 0x55, 0x56, 0x8D, 0x71, 0x34, 0x57, 0x89, 0x4C, 0x24, 0x10, 0x89, 0x74, 0x24, 0x1C};
     cout << "Search for send function." << endl;
     DWORD add_send = GetAddressFromSignature(signature_send,0x00000000,0x00000000);
     cout << "Found Send function at "  << uppercase << hex << add_send << endl;
-    hookAddress = reinterpret_cast<uintptr_t*>(add_send + 0x03);
-    jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
-    detour_send(hookAddress, reinterpret_cast<uintptr_t*>(&hooked_send), hooklength);
-    cout << "Hooked function at " << uppercase << hex << hookAddress << endl;
-*/
-    // print status
+    //internalSend = (TinternalSend) (add_send);
+    //cout << "Set internalSend to "  << (void*)internalSend << endl;
+    //internalSendAfter = (TinternalSendAfter) (add_send+0x70);
+    //cout << "Set internalSendAfter to "  << (void*)internalSendAfter << endl;
+    //hookAddress = reinterpret_cast<uintptr_t*>(add_send + 0x03);
+    //jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
+    //detour_send(hookAddress, reinterpret_cast<uintptr_t*>(&hooked_send), hooklength);
+    //cout << "Hooked function at " << uppercase << hex << hookAddress << endl;
+
+
     while (true) {
-        Sleep(500);
+        Sleep(250);
         if (GetAsyncKeyState(VK_ESCAPE) & 1) {
             break;
         }
-        //BYTE SendBuffer[] = {0x4F, 0x01, 0x00, 0x00};
-        //Send(sizeof(SendBuffer), &SendBuffer[0]);
     }
+    
+    stopConsole();
+    FreeLibraryAndExitThread(inj_hModule, 0);
 
     stopConsole();
     FreeLibraryAndExitThread(hInst, 0);
 }
 
-// DLL main function
-//
-/*BOOL APIENTRY DllMain (HINSTANCE hInst, DWORD reason, LPVOID reserved) {
+BOOL APIENTRY DllMain (HINSTANCE hInst, DWORD reason, LPVOID reserved) {
     switch (reason) {
         case DLL_PROCESS_ATTACH:
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)Main, hInst, NULL, NULL);
@@ -334,168 +377,4 @@ void Main(HINSTANCE hInst) {
             break;
     }
     return TRUE;
-}*/
-
-////////////////////////////////////////////////////////////////////////////////////
-//https://sim0n.wordpress.com/2009/03/29/c-creating-a-window-from-a-dll/
-////////////////////////////////////////////////////////////////////////////////////
-
-
-//Register our windows Class
-BOOL RegisterDLLWindowClass(wchar_t szClassName[]){
-    WNDCLASSEX wc;
-    wc.hInstance =  inj_hModule;
-	wc.lpszClassName = (LPCWSTR)L"InjectedDLLWindowClass";
-    wc.lpszClassName = (LPCWSTR)szClassName;
-    wc.lpfnWndProc = DLLWindowProc;
-    wc.style = CS_DBLCLKS;
-    wc.cbSize = sizeof (WNDCLASSEX);
-    wc.hIcon = LoadIcon (NULL, IDI_APPLICATION);
-    wc.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursor (NULL, IDC_ARROW);
-    wc.lpszMenuName = NULL;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
-    wc.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
-    if (!RegisterClassEx (&wc))
-		return 0;
-}
-//Creating our windows Menu
-HMENU CreateDLLWindowMenu(){
-	HMENU hMenu;
-	hMenu = CreateMenu();
-	HMENU hMenuPopup;
-    if(hMenu==NULL)
-        return FALSE;
-    hMenuPopup = CreatePopupMenu();
-	AppendMenu (hMenuPopup, MF_STRING, MYMENU_EXIT, TEXT("Exit"));
-    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("File")); 
-	hMenuPopup = CreatePopupMenu();
-    AppendMenu (hMenuPopup, MF_STRING,MYMENU_MESSAGEBOX, TEXT("Clear Textbox")); 
-    AppendMenu (hMenu, MF_POPUP, (UINT_PTR) hMenuPopup, TEXT("Options")); 
-	return hMenu;
-}
-//The new thread
-DWORD WINAPI ThreadProc( LPVOID lpParam ){
-    MSG messages;
-	wchar_t *pString = reinterpret_cast<wchar_t * > (lpParam);
-	HMENU hMenu = CreateDLLWindowMenu();
-	RegisterDLLWindowClass(L"InjectedDLLWindowClass");
-	prnt_hWnd = FindWindow(L"Window Injected Into ClassName", L"Window Injected Into Caption");
-	HWND hwnd = CreateWindowEx (0, L"InjectedDLLWindowClass", pString, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1225, 750, prnt_hWnd, hMenu,inj_hModule, NULL );
-	ShowWindow (hwnd, SW_SHOWNORMAL);
-
-    startConsole();
-
-    // init hook
-    std::vector<int> signature_send = {0x56, 0x8B, 0xF1, 0x8B, 0x46, 0x54, 0x8B, 0x4E, 0x50, 0x57, 0x8B, 0x7C, 0x24, 0x0C, 0x2B, 0xC8, 0x8D, 0x57, 0x01, 0x3B, 0xD1};
-    cout << "Search for send function." << endl;
-    DWORD add_send = GetAddressFromSignature(signature_send,0x00000000,0x00000000);
-    cout << "Found Send function at "  << uppercase << hex << add_send << endl;
-    internalSend = (TinternalSend) (add_send);
-    cout << "Set internalSend to "  << (void*)internalSend << endl;
-    internalSendAfter = (TinternalSendAfter) (add_send+0x70);
-    cout << "Set internalSendAfter to "  << (void*)internalSendAfter << endl;
-    hookAddress = reinterpret_cast<uintptr_t*>(add_send + 0x03);
-    jmpBackAddy = reinterpret_cast<uintptr_t*>(reinterpret_cast<uint32_t> (hookAddress) + hooklength);
-    detour_send(hookAddress, reinterpret_cast<uintptr_t*>(&hooked_send), hooklength);
-    //cout << "Hooked function at " << uppercase << hex << hookAddress << endl;
-    window_mode = TRUE;
-
-    while (GetMessage (&messages, NULL, 0, 0)) {
-		TranslateMessage(&messages);
-        DispatchMessage(&messages);
-    }
-    
-    stopConsole();
-    FreeLibraryAndExitThread(inj_hModule, 0);
-    return 1;
-}
-
-//Our new windows proc
-LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    switch (message){
-        case WM_CREATE:
-            // https://www.daniweb.com/programming/software-development/threads/490846/win32-c-gui-take-inputed-text-and-show-it-in-another-window
-            TextBox = CreateWindow(L"EDIT",
-                                   L"",
-                                   WS_BORDER | WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_HSCROLL | ES_READONLY,
-                                   0, 0, 1200, 600,
-                                   hwnd, (HMENU) 1, NULL, NULL);
-            SendBox = CreateWindow(L"EDIT",
-                                   L"",
-                                   WS_BORDER | WS_CHILD | WS_VISIBLE,
-                                   0, 610, 1100, 30,
-                                   hwnd, (HMENU) 1, NULL, NULL);
-            SendButton = CreateWindow(L"BUTTON",  // Predefined class; Unicode assumed 
-                                    L"SEND",      // Button text 
-                                    WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
-                                    1110,         // x position 
-                                    610,         // y position 
-                                    90,        // Button width
-                                    30,        // Button height
-                                    hwnd,     // Parent window
-                                    (HMENU)MYBUTTON_SEND,       // No menu.
-                                    NULL, 
-                                    NULL);      // Pointer not needed.
-		case WM_COMMAND:
-               switch(wParam){
-                    case MYMENU_EXIT: {
-						SendMessage(hwnd, WM_CLOSE, 0, 0);
-                        break;}
-                    case MYMENU_MESSAGEBOX:{
-                        // example append message
-						//MessageBox(hwnd, L"Test", L"MessageBox",MB_OK);
-                        //string buffer = "append this!\n";
-                        int index = GetWindowTextLength (TextBox);
-                        cout << index << endl;
-                        SetFocus (TextBox); // set focus
-                        SendMessage(TextBox, EM_SETREADONLY, FALSE, 0);
-                        SendMessage(TextBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
-                        SendMessage(TextBox, WM_CLEAR, (WPARAM)0, (LPARAM)index); // set selection - end of text
-                        SendMessage(TextBox, EM_SETREADONLY, TRUE, 0);
-                        break;}
-                    case MYBUTTON_SEND:{
-                        cout << "YOU SEND." << endl;
-                        int len = SendMessage(SendBox, WM_GETTEXTLENGTH, 0, 0);
-                        cout << len << endl;
-                        TCHAR* display = new TCHAR[len];
-                        SendMessage(SendBox,WM_GETTEXT,len+1,(LPARAM)display);
-                        //_tprintf(display);
-                        wstring test(&display[0]);
-                        string test2(test.begin(), test.end());
-                        cout << test2 << endl;
-                        if(len%2==0) {
-                            int j=0;
-                            for(int i=0; i < test2.length()-1; i=i+2) {
-                                cout << stoi(test2.substr(i,2).c_str(), 0, 16) << endl;
-                                mySendBuffer[j] = stoi(test2.substr(i,2).c_str(), 0, 16);
-                                j++;
-                            }
-                            Send(len/2, &mySendBuffer[0]);
-                        }
-                        int index = GetWindowTextLength (SendBox);
-                        cout << index << endl;
-                        SetFocus (SendBox); // set focus
-                        SendMessage(SendBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
-                        SendMessage(SendBox, WM_CLEAR, (WPARAM)0, (LPARAM)index); // set selection - end of text
-                        break;
-                        }
-               }
-               break;
-		case WM_DESTROY:
-			PostQuitMessage (0);
-			break;
-		default:
-			return DefWindowProc (hwnd, message, wParam, lParam);
-    }
-    return 0;
-}
-
-BOOL APIENTRY DllMain( HMODULE hModule, DWORD  ul_reason_for_call,LPVOID lpReserved) {
-	if(ul_reason_for_call==DLL_PROCESS_ATTACH) {
-		inj_hModule = hModule;
-		CreateThread(0, NULL, ThreadProc, (LPVOID)L"GAME NETWORK TRACKER", NULL, NULL);
-	}
-	return TRUE;
 }
