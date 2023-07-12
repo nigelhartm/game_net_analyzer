@@ -90,7 +90,7 @@ void otherFunc() {
         }
         if(bufferLength > 1) {
             string prefix = "SEND: ";
-            string buffer = prefix.append(stream.str().append("\r\n"));
+            string buffer = prefix.append(stream.str());//.append("\r\n"));
             if(checkbox_send) {
                 int index = GetWindowTextLength (TextBox);
                 SetFocus (TextBox);
@@ -99,15 +99,15 @@ void otherFunc() {
             }
         }
         else {
-            cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
-            /*string prefix = "";
+            //cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
+            string prefix = "";
             string buffer = prefix.append(stream.str().append("\r\n"));
             if(checkbox_send) {
                 int index = GetWindowTextLength (TextBox);
                 SetFocus (TextBox);
                 SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
                 SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
-            }*/
+            }
         }
     //}
     // fins first different network so start injection after being ingame
