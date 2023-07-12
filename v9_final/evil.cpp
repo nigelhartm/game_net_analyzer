@@ -82,23 +82,35 @@ bool detour_send(uintptr_t* src, uintptr_t* dst, int len) {
 void otherFunc() {
     uintptr_t* ptr_bufferAddress = reinterpret_cast<uintptr_t*>(bufferAddress);
     memcpy (&ownBuffer[0], ptr_bufferAddress, bufferLength);
-    std::stringstream stream;
-    for(int i = 0; i < bufferLength; i++) {
-        stream << ( ( (int) ownBuffer[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[i];
-    }
-    if(bufferLength > 1) {
-        string prefix = "SEND: ";
-        string buffer = prefix.append(stream.str().append("\r\n"));
-        if(checkbox_send) {
-            int index = GetWindowTextLength (TextBox);
-            SetFocus (TextBox);
-            SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
-            SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+    //Filter Header
+    //if(ownBuffer[0] != 0x0B) {
+        std::stringstream stream;
+        for(int i = 0; i < bufferLength; i++) {
+            stream << ( ( (int) ownBuffer[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[i];
         }
-    }
-    else {
-        //cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
-    }
+        if(bufferLength > 1) {
+            string prefix = "SEND: ";
+            string buffer = prefix.append(stream.str().append("\r\n"));
+            if(checkbox_send) {
+                int index = GetWindowTextLength (TextBox);
+                SetFocus (TextBox);
+                SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
+                SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+            }
+        }
+        else {
+            cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
+            /*string prefix = "";
+            string buffer = prefix.append(stream.str().append("\r\n"));
+            if(checkbox_send) {
+                int index = GetWindowTextLength (TextBox);
+                SetFocus (TextBox);
+                SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
+                SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+            }*/
+        }
+    //}
+    // fins first different network so start injection after being ingame
     if(initSend == FALSE){
         CPythonNetworkStream = reinterpret_cast<uintptr_t*>(bufferptr_CPythonNetworkStream);
         cout << "CPYTHON found inside Send at " << (void*)bufferptr_CPythonNetworkStream << endl;
@@ -109,23 +121,21 @@ void otherFunc() {
 void otherFuncRecv() {
     uintptr_t* ptr_bufferAddress = reinterpret_cast<uintptr_t*>(bufferAddressRecv);
     memcpy (&ownBufferRecv[0], ptr_bufferAddress, bufferLengthRecv);
-    std::stringstream stream;
-    for(int i = 0; i < bufferLengthRecv; i++) {
-        stream << ( ( (int) ownBufferRecv[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBufferRecv[i];
-    }
-    string prefix = "RECV: ";
-    string buffer = prefix.append(stream.str().append("\r\n"));
-    if(checkbox_recv) {
-        int index = GetWindowTextLength (TextBox);
-        SetFocus (TextBox);
-        SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
-        SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
-    }
-    /*if(initSend == FALSE){
-        CPythonNetworkStream = reinterpret_cast<uintptr_t*>(bufferptr_CPythonNetworkStream);
-        cout << "CPYTHON found inside Recv at " << (void*)bufferptr_CPythonNetworkStream << endl;
-        initSend = TRUE;
-    }*/
+    //Filter Header
+    //if(ownBufferRecv[0] != 0x0B) {
+        std::stringstream stream;
+        for(int i = 0; i < bufferLengthRecv; i++) {
+            stream << ( ( (int) ownBufferRecv[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBufferRecv[i];
+        }
+        string prefix = "RECV: ";
+        string buffer = prefix.append(stream.str().append("\r\n"));
+        if(checkbox_recv) {
+            int index = GetWindowTextLength (TextBox);
+            SetFocus (TextBox);
+            SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
+            SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+        }
+    //}
 }
 
 void __declspec(naked) hooked_send() {
@@ -306,7 +316,7 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
     switch (message){
         case WM_CREATE:
             TextBox = CreateWindow(L"EDIT", L"", WS_BORDER | WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_HSCROLL | ES_READONLY, 0, 0, 1200, 600, hwnd, (HMENU) 1, NULL, NULL);
-            SendBox = CreateWindow(L"EDIT", L"",  WS_BORDER | WS_CHILD | WS_VISIBLE, 0, 610, 1100, 30, hwnd, (HMENU) 1, NULL, NULL);
+            SendBox = CreateWindow(L"EDIT", L"Just usable if injected after choosing char. . .",  WS_BORDER | WS_CHILD | WS_VISIBLE, 0, 610, 1100, 30, hwnd, (HMENU) 1, NULL, NULL);
             SendButton = CreateWindow(L"BUTTON", L"SEND", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 1110, 610, 90, 30, hwnd, (HMENU)MYBUTTON_SEND, NULL, NULL);
             CheckBoxRecv = CreateWindow(TEXT("button"), TEXT("Show Recv"), WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 20, 650, 185, 30, hwnd, (HMENU)MYCHECKBOX_RECV, NULL, NULL);
             CheckBoxSend = CreateWindow(TEXT("button"), TEXT("Show Send"), WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 250, 650, 185, 30, hwnd, (HMENU)MYCHECKBOX_SEND, NULL, NULL);
