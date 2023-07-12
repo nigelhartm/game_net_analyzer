@@ -12,12 +12,15 @@
 
 #define MYMENU_EXIT         (WM_APP + 101)
 #define MYMENU_MESSAGEBOX   (WM_APP + 102) 
-#define MYBUTTON_SEND   (WM_APP + 103) 
+#define MYBUTTON_SEND   (WM_APP + 103)
+#define MYCHECKBOX_RECV (WM_APP +104)
+#define MYCHECKBOX_SEND (WM_APP +105)
 
 HINSTANCE  inj_hModule;
 HWND       prnt_hWnd;
-HWND TextBox, SendBox, SendButton;
-
+HWND TextBox, SendBox, SendButton, CheckBoxRecv, CheckBoxSend;
+bool checkbox_recv = false;
+bool checkbox_send = false;
 LRESULT CALLBACK DLLWindowProc (HWND, UINT, WPARAM, LPARAM);
 
 using namespace std;
@@ -86,10 +89,12 @@ void otherFunc() {
     if(bufferLength > 1) {
         string prefix = "SEND: ";
         string buffer = prefix.append(stream.str().append("\r\n"));
-        int index = GetWindowTextLength (TextBox);
-        SetFocus (TextBox);
-        SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
-        SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+        if(checkbox_send) {
+            int index = GetWindowTextLength (TextBox);
+            SetFocus (TextBox);
+            SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
+            SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+        }
     }
     else {
         //cout << "Skipped one byte at the end: " << ( ( (int) ownBuffer[0] < 16) ? "0" : "") << uppercase << hex << (int)ownBuffer[0] << endl;
@@ -103,29 +108,24 @@ void otherFunc() {
 
 void otherFuncRecv() {
     uintptr_t* ptr_bufferAddress = reinterpret_cast<uintptr_t*>(bufferAddressRecv);
-    cout << "1" << endl;
     memcpy (&ownBufferRecv[0], ptr_bufferAddress, bufferLengthRecv);
-    cout << "2" << endl;
     std::stringstream stream;
-    cout << "3" << endl;
     for(int i = 0; i < bufferLengthRecv; i++) {
         stream << ( ( (int) ownBufferRecv[i] < 16) ? "0" : "") << uppercase << hex << (int)ownBufferRecv[i];
     }
-    cout << "4" << endl;
     string prefix = "RECV: ";
-    cout << "5" << endl;
     string buffer = prefix.append(stream.str().append("\r\n"));
-    cout << "6" << endl;
-    int index = GetWindowTextLength (TextBox);
-    cout << "7" << endl;
-    SetFocus (TextBox);
-    SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
-    SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
-    //if(initSend == FALSE){
-    //    CPythonNetworkStream = reinterpret_cast<uintptr_t*>(bufferptr_CPythonNetworkStream);
-    //    cout << "CPYTHON found inside Recv at " << (void*)bufferptr_CPythonNetworkStream << endl;
-    //    initSend = TRUE;
-    //}
+    if(checkbox_recv) {
+        int index = GetWindowTextLength (TextBox);
+        SetFocus (TextBox);
+        SendMessageA(TextBox, EM_SETSEL, (WPARAM)index, (LPARAM)index);
+        SendMessageA(TextBox, EM_REPLACESEL, 0, (LPARAM)buffer.c_str());
+    }
+    /*if(initSend == FALSE){
+        CPythonNetworkStream = reinterpret_cast<uintptr_t*>(bufferptr_CPythonNetworkStream);
+        cout << "CPYTHON found inside Recv at " << (void*)bufferptr_CPythonNetworkStream << endl;
+        initSend = TRUE;
+    }*/
 }
 
 void __declspec(naked) hooked_send() {
@@ -308,6 +308,12 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             TextBox = CreateWindow(L"EDIT", L"", WS_BORDER | WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | WS_HSCROLL | ES_READONLY, 0, 0, 1200, 600, hwnd, (HMENU) 1, NULL, NULL);
             SendBox = CreateWindow(L"EDIT", L"",  WS_BORDER | WS_CHILD | WS_VISIBLE, 0, 610, 1100, 30, hwnd, (HMENU) 1, NULL, NULL);
             SendButton = CreateWindow(L"BUTTON", L"SEND", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 1110, 610, 90, 30, hwnd, (HMENU)MYBUTTON_SEND, NULL, NULL);
+            CheckBoxRecv = CreateWindow(TEXT("button"), TEXT("Show Recv"), WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 20, 650, 185, 30, hwnd, (HMENU)MYCHECKBOX_RECV, NULL, NULL);
+            CheckBoxSend = CreateWindow(TEXT("button"), TEXT("Show Send"), WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, 250, 650, 185, 30, hwnd, (HMENU)MYCHECKBOX_SEND, NULL, NULL);
+            CheckDlgButton(CheckBoxRecv, 1, BST_UNCHECKED);
+            CheckDlgButton(CheckBoxSend, 1, BST_UNCHECKED);
+            checkbox_recv = false;
+            checkbox_send = false;
 		case WM_COMMAND:
                switch(wParam){
                     case MYMENU_EXIT: {
@@ -316,7 +322,6 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
                     }
                     case MYMENU_MESSAGEBOX: {
                         int index = GetWindowTextLength (TextBox);
-                        cout << index << endl;
                         SetFocus (TextBox);
                         SendMessage(TextBox, EM_SETREADONLY, FALSE, 0);
                         SendMessage(TextBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
@@ -326,6 +331,48 @@ LRESULT CALLBACK DLLWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM l
                     }
                     case MYBUTTON_SEND: {
                         cout << "YOU SEND." << endl;
+                        int len = SendMessage(SendBox, WM_GETTEXTLENGTH, 0, 0);
+                        cout << len << endl;
+                        TCHAR* display = new TCHAR[len];
+                        SendMessage(SendBox,WM_GETTEXT,len+1,(LPARAM)display);
+                        //_tprintf(display);
+                        wstring test(&display[0]);
+                        string test2(test.begin(), test.end());
+                        cout << test2 << endl;
+                        if(len%2==0) {
+                            int j=0;
+                            for(int i=0; i < test2.length()-1; i=i+2) {
+                                cout << stoi(test2.substr(i,2).c_str(), 0, 16) << endl;
+                                mySendBuffer[j] = static_cast<int>(stoi(test2.substr(i,2).c_str(), 0, 16));
+                                j++;
+                            }
+                            Send(len/2, &mySendBuffer[0]);
+                        }
+                        int index = GetWindowTextLength (SendBox);
+                        cout << index << endl;
+                        SetFocus (SendBox); // set focus
+                        SendMessage(SendBox, EM_SETSEL, (WPARAM)0, (LPARAM)index);
+                        SendMessage(SendBox, WM_CLEAR, (WPARAM)0, (LPARAM)index);
+                        break;
+                    }
+                    case MYCHECKBOX_RECV: {
+                        if (checkbox_recv) {
+                            CheckDlgButton(CheckBoxRecv, 1, BST_UNCHECKED);
+                            checkbox_recv = false;
+                        } else {
+                            CheckDlgButton(CheckBoxRecv, 1, BST_CHECKED);
+                            checkbox_recv = true;
+                        }
+                        break;
+                    }
+                    case MYCHECKBOX_SEND: {
+                        if (checkbox_send) {
+                            CheckDlgButton(CheckBoxSend, 1, BST_UNCHECKED);
+                            checkbox_send = false;
+                        } else {
+                            CheckDlgButton(CheckBoxSend, 1, BST_CHECKED);
+                            checkbox_send = true;
+                        }
                         break;
                     }
                }
