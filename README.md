@@ -1,4 +1,4 @@
-# cpp_game_net_analyzer
+# game_net_analyzer
 Welcome to the Game Network Analyzer repository! This program has been developed with the primary objective of enhancing our understanding of reverse engineering, without any intention of disrupting the gaming experience for others. Here's an overview of the key functionalities it offers:
 * Intercept and analyze packets sent from the game client to the server before encryption.
 * Intercept and inspect packets sent from the server to the client after decryption.
