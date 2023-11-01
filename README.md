@@ -7,7 +7,7 @@ Welcome to the Game Network Analyzer repository! This program has been developed
 * Utilize a user-friendly graphical interface to systematically analyze packet structures.
 
 ## Demo
-Here's a demo showcasing the end result, where every action in the game results in a packet being sent from the client to the server:
+Here's a demo showcasing the end result (in the game Metin2), where every action in the game results in a packet being sent from the client to the server:
 ![Demo](images/demo.gif)
 
 ## Why?
