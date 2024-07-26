@@ -31,4 +31,4 @@ I've observed that the first byte typically indicates the packet type or the ove
 Using the data acquired by this program to gain an advantage in the game can result in a ban from the game. I do not take responsibility for any such consequences. Our program is solely intended for observational purposes.
 
 ## Future
-After dedicating some months ago to this project and related projects, I currently have no specific plans for its future. I am delighted to share it here with the community and welcome any ideas or suggestions for improvements. Your insights can contribute to enhancing the program's capabilities and usability.
+After dedicating some months ago to this project and related projects, I currently have no specific plans for its future. I am delighted to share it here with the community and welcome any ideas or suggestions for improvements.
